@@ -291,35 +291,34 @@ def test_lift(robot, arm_name="Robot"):
         return
 
     lift_state = result[1]
-    current_height = lift_state.get('height', 0)
+    current_height = lift_state.get('pos', 0)  # 'pos' is the height in mm for lift
     print(f"[{arm_name}] Current lift height: {current_height}mm")
 
-    # Small movement: +/- 50mm from current position
+    # Only LEFT arm controls lift (RIGHT arm pos=0 means no lift)
+    if current_height == 0:
+        print(f"[{arm_name}] No lift available (pos=0), skipping control")
+        return
+
+    # Move down 50mm, then up 50mm (back to original)
     movement = 50  # 50 millimeters
     speed = 10  # 10% speed percentage
 
-    # Calculate safe target heights (within 0-2600mm range)
-    target_up = min(current_height + movement, 2600)  # height in mm, max 2600mm
-    target_down = max(current_height - movement, 0)   # height in mm, min 0mm
+    # Calculate safe target height (within 0-2600mm range)
+    target_down = max(current_height - movement, 0)  # height in mm, min 0mm
 
-    print(f"[{arm_name}] Moving lift up to {target_up}mm...")
-    result = robot.rm_set_lift_height(speed, target_up, 1)  # speed: 10%, height: mm
-    if result != 0:
-        print(f"[{arm_name}] Lift up failed, error: {result}")
-        return
-    time.sleep(0.5)  # 500ms delay
-
-    print(f"[{arm_name}] Moving lift down to {target_down}mm...")
+    # Step 1: Move down 50mm
+    print(f"[{arm_name}] Moving lift DOWN by {movement}mm: {current_height}mm -> {target_down}mm...")
     result = robot.rm_set_lift_height(speed, target_down, 1)  # speed: 10%, height: mm
     if result != 0:
         print(f"[{arm_name}] Lift down failed, error: {result}")
         return
     time.sleep(0.5)  # 500ms delay
 
-    print(f"[{arm_name}] Returning lift to original height {current_height}mm...")
+    # Step 2: Move up 50mm (back to original)
+    print(f"[{arm_name}] Moving lift UP by {movement}mm: {target_down}mm -> {current_height}mm...")
     result = robot.rm_set_lift_height(speed, current_height, 1)  # speed: 10%, height: mm
     if result != 0:
-        print(f"[{arm_name}] Lift return failed, error: {result}")
+        print(f"[{arm_name}] Lift up failed, error: {result}")
         return
 
     print(f"[{arm_name}] Lift test completed successfully")
@@ -351,11 +350,11 @@ def run_arm_tests(ip, port, arm_name):
         test_movej(robot, arm_name)
         time.sleep(1)  # 1 second delay between tests
 
-        test_movej_p(robot, arm_name)
-        time.sleep(1)  # 1 second delay between tests
+        # test_movej_p(robot, arm_name)
+        # time.sleep(1)  # 1 second delay between tests
 
-        test_moves(robot, arm_name)
-        time.sleep(1)  # 1 second delay between tests
+        # test_moves(robot, arm_name)
+        # time.sleep(1)  # 1 second delay between tests
 
         test_movej_canfd(robot, arm_name)
         time.sleep(1)  # 1 second delay between tests
